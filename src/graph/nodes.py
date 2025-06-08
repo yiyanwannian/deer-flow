@@ -314,9 +314,10 @@ async def _execute_agent_step(
         logger.warning("No unexecuted step found")
         return Command(goto="research_team")
 
+    # 记录执行步骤的信息
     logger.info(f"Executing step: {current_step.title}, agent: {agent_name}")
 
-    # Format completed steps information
+    # 格式化已完成步骤的信息
     completed_steps_info = ""
     if completed_steps:
         completed_steps_info = "# Existing Research Findings\n\n"
@@ -324,7 +325,7 @@ async def _execute_agent_step(
             completed_steps_info += f"## Existing Finding {i + 1}: {step.title}\n\n"
             completed_steps_info += f"<finding>\n{step.execution_res}\n</finding>\n\n"
 
-    # Prepare the input for the agent with completed steps info
+    # 准备包含已完成步骤信息的智能体输入
     agent_input = {
         "messages": [
             HumanMessage(
@@ -333,7 +334,7 @@ async def _execute_agent_step(
         ]
     }
 
-    # Add citation reminder for researcher agent
+    # 为研究员智能体添加引用提醒
     if agent_name == "researcher":
         if state.get("resources"):
             resources_info = "**The user mentioned the following resource files:**\n\n"
@@ -358,6 +359,7 @@ async def _execute_agent_step(
     # Invoke the agent
     default_recursion_limit = 25
     try:
+        # 从环境变量获取递归限制，默认为25
         env_value_str = os.getenv("AGENT_RECURSION_LIMIT", str(default_recursion_limit))
         parsed_limit = int(env_value_str)
 
@@ -365,12 +367,14 @@ async def _execute_agent_step(
             recursion_limit = parsed_limit
             logger.info(f"Recursion limit set to: {recursion_limit}")
         else:
+            # 如果环境变量值不是正数，使用默认值
             logger.warning(
                 f"AGENT_RECURSION_LIMIT value '{env_value_str}' (parsed as {parsed_limit}) is not positive. "
                 f"Using default value {default_recursion_limit}."
             )
             recursion_limit = default_recursion_limit
     except ValueError:
+        # 如果环境变量值无法解析为整数，使用默认值
         raw_env_value = os.getenv("AGENT_RECURSION_LIMIT")
         logger.warning(
             f"Invalid AGENT_RECURSION_LIMIT value: '{raw_env_value}'. "
@@ -378,19 +382,21 @@ async def _execute_agent_step(
         )
         recursion_limit = default_recursion_limit
 
+    # 记录智能体输入并调用智能体
     logger.info(f"Agent input: {agent_input}")
     result = await agent.ainvoke(
         input=agent_input, config={"recursion_limit": recursion_limit}
     )
 
-    # Process the result
+    # 处理智能体返回的结果
     response_content = result["messages"][-1].content
     logger.debug(f"{agent_name.capitalize()} full response: {response_content}")
 
-    # Update the step with the execution result
+    # 更新步骤的执行结果
     current_step.execution_res = response_content
     logger.info(f"Step '{current_step.title}' execution completed by {agent_name}")
 
+    # 返回命令，更新状态并转到研究团队节点
     return Command(
         update={
             "messages": [
@@ -427,11 +433,27 @@ async def _setup_and_execute_agent_step(
     Returns:
         Command to update state and go to research_team
     """
+    # """设置智能体并执行步骤的辅助函数。
+    #
+    # 此函数处理researcher_node和coder_node的通用逻辑：
+    # 1. 根据智能体类型配置MCP服务器和工具
+    # 2. 创建具有适当工具的智能体或使用默认智能体
+    # 3. 在当前步骤上执行智能体
+    #
+    # 参数:
+    #     state: 当前状态
+    #     config: 可运行配置
+    #     agent_type: 智能体类型 ("researcher" 或 "coder")
+    #     default_tools: 添加到智能体的默认工具
+    #
+    # 返回:
+    #     更新状态并转到research_team的命令
+    # """
     configurable = Configuration.from_runnable_config(config)
     mcp_servers = {}
     enabled_tools = {}
 
-    # Extract MCP server configuration for this agent type
+    # 提取此智能体类型的MCP服务器配置
     if configurable.mcp_settings:
         for server_name, server_config in configurable.mcp_settings["servers"].items():
             if (
@@ -446,7 +468,7 @@ async def _setup_and_execute_agent_step(
                 for tool_name in server_config["enabled_tools"]:
                     enabled_tools[tool_name] = server_name
 
-    # Create and execute agent with MCP tools if available
+    # 如果有可用的MCP工具，创建并执行带有MCP工具的智能体
     if mcp_servers:
         async with MultiServerMCPClient(mcp_servers) as client:
             loaded_tools = default_tools[:]
@@ -459,7 +481,7 @@ async def _setup_and_execute_agent_step(
             agent = create_agent(agent_type, agent_type, loaded_tools, agent_type)
             return await _execute_agent_step(state, agent, agent_type)
     else:
-        # Use default tools if no MCP servers are configured
+        # 如果没有配置MCP服务器，使用默认工具
         agent = create_agent(agent_type, agent_type, default_tools, agent_type)
         return await _execute_agent_step(state, agent, agent_type)
 
@@ -467,7 +489,7 @@ async def _setup_and_execute_agent_step(
 async def researcher_node(
     state: State, config: RunnableConfig
 ) -> Command[Literal["research_team"]]:
-    """Researcher node that do research"""
+    """研究员节点，负责进行研究"""
     logger.info("Researcher node is researching.")
     configurable = Configuration.from_runnable_config(config)
     tools = [get_web_search_tool(configurable.max_search_results), crawl_tool]
@@ -486,7 +508,7 @@ async def researcher_node(
 async def coder_node(
     state: State, config: RunnableConfig
 ) -> Command[Literal["research_team"]]:
-    """Coder node that do code analysis."""
+    """编码员节点，负责代码分析"""
     logger.info("Coder node is coding.")
     return await _setup_and_execute_agent_step(
         state,
