@@ -1,0 +1,201 @@
+@startuml DeerFlow系统架构图
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+
+title DeerFlow 深度研究框架 - 系统架构图
+
+package "用户界面层" as UI {
+    [Web UI (Next.js)] as WebUI
+    [Console UI] as ConsoleUI
+    [LangGraph Studio] as Studio
+}
+
+package "API网关层" as Gateway {
+    [FastAPI Server] as API
+    [WebSocket] as WS
+    [RESTful API] as REST
+}
+
+package "核心工作流引擎" as Core {
+    package "LangGraph工作流" as Workflow {
+        [Coordinator Node] as Coordinator
+        [Planner Node] as Planner
+        [Human Feedback Node] as HumanFeedback
+        [Background Investigator] as BackgroundInv
+        [Research Team Node] as ResearchTeam
+        [Reporter Node] as Reporter
+    }
+    
+    package "智能体系统" as Agents {
+        [Researcher Agent] as Researcher
+        [Coder Agent] as Coder
+        [Agent Factory] as AgentFactory
+    }
+    
+    package "状态管理" as StateManagement {
+        [State Graph] as StateGraph
+        [Memory Saver] as Memory
+        [Configuration] as Config
+    }
+}
+
+package "LLM服务层" as LLMLayer {
+    package "LLM管理" as LLMManagement {
+        [LLM Factory] as LLMFactory
+        [Basic LLM] as BasicLLM
+        [Reasoning LLM] as ReasoningLLM
+        [Vision LLM] as VisionLLM
+    }
+    
+    package "提示词系统" as PromptSystem {
+        [Jinja2 Templates] as Templates
+        [Prompt Loader] as PromptLoader
+        [Template Engine] as TemplateEngine
+    }
+}
+
+package "工具生态系统" as Tools {
+    package "搜索工具" as SearchTools {
+        [Tavily Search] as Tavily
+        [DuckDuckGo] as DuckDuckGo
+        [Brave Search] as Brave
+        [Arxiv Search] as Arxiv
+    }
+    
+    package "内容工具" as ContentTools {
+        [Jina Crawler] as Crawler
+        [Python REPL] as PythonREPL
+        [Tool Decorators] as Decorators
+    }
+    
+    package "RAG系统" as RAGSystem {
+        [RAGFlow Provider] as RAGFlow
+        [Retriever Interface] as Retriever
+        [Document Parser] as DocParser
+    }
+    
+    package "MCP集成" as MCPIntegration {
+        [MCP Client] as MCPClient
+        [Multi-Server MCP] as MultiMCP
+        [Dynamic Tool Loader] as DynamicLoader
+    }
+}
+
+package "扩展功能模块" as Extensions {
+    package "内容生成" as ContentGeneration {
+        [Podcast Generator] as Podcast
+        [PPT Generator] as PPT
+        [Prose Writer] as Prose
+    }
+    
+    package "音频处理" as AudioProcessing {
+        [TTS Engine] as TTS
+        [Audio Mixer] as AudioMixer
+        [Volcengine TTS] as VolcTTS
+    }
+}
+
+package "配置管理" as ConfigManagement {
+    [YAML Config Loader] as YAMLLoader
+    [Environment Variables] as EnvVars
+    [Agent Configuration] as AgentConfig
+    [Tool Configuration] as ToolConfig
+}
+
+package "外部服务" as ExternalServices {
+    [OpenAI API] as OpenAI
+    [Anthropic API] as Anthropic
+    [Tavily API] as TavilyAPI
+    [Brave API] as BraveAPI
+    [RAGFlow Server] as RAGFlowServer
+    [MCP Servers] as MCPServers
+}
+
+' 用户界面连接
+WebUI --> API : HTTP/WebSocket
+ConsoleUI --> Workflow : Direct Call
+Studio --> Workflow : Debug Interface
+
+' API层连接
+API --> Workflow : Invoke
+WS --> Workflow : Stream
+REST --> Extensions : Generate Content
+
+' 工作流内部连接
+Coordinator --> Planner : Delegate
+Coordinator --> BackgroundInv : Investigate
+Planner --> HumanFeedback : Review Plan
+HumanFeedback --> ResearchTeam : Execute
+ResearchTeam --> Reporter : Generate Report
+
+' 智能体连接
+ResearchTeam --> Researcher : Research Tasks
+ResearchTeam --> Coder : Code Tasks
+AgentFactory --> Researcher : Create
+AgentFactory --> Coder : Create
+
+' 状态管理连接
+Workflow --> StateGraph : State Updates
+StateGraph --> Memory : Persist
+Config --> Workflow : Configuration
+
+' LLM服务连接
+Agents --> LLMFactory : Get LLM
+LLMFactory --> BasicLLM : Basic Tasks
+LLMFactory --> ReasoningLLM : Complex Reasoning
+LLMFactory --> VisionLLM : Vision Tasks
+Agents --> TemplateEngine : Apply Prompts
+TemplateEngine --> Templates : Load Templates
+
+' 工具连接
+Researcher --> SearchTools : Web Search
+Researcher --> Crawler : Content Extraction
+Researcher --> MCPIntegration : External Tools
+Coder --> PythonREPL : Code Execution
+Researcher --> RAGSystem : Knowledge Retrieval
+
+' 扩展功能连接
+Reporter --> Extensions : Generate Content
+Extensions --> TTS : Audio Generation
+Extensions --> AudioMixer : Audio Processing
+
+' 配置连接
+ConfigManagement --> LLMFactory : LLM Config
+ConfigManagement --> Tools : Tool Config
+ConfigManagement --> Agents : Agent Config
+
+' 外部服务连接
+LLMFactory --> OpenAI : API Calls
+LLMFactory --> Anthropic : API Calls
+SearchTools --> TavilyAPI : Search Requests
+SearchTools --> BraveAPI : Search Requests
+RAGSystem --> RAGFlowServer : Knowledge Queries
+MCPIntegration --> MCPServers : Tool Requests
+TTS --> VolcTTS : Audio Generation
+
+note right of Workflow
+  基于LangGraph的状态机工作流
+  支持条件分支和循环
+  可视化调试和监控
+end note
+
+note right of Tools
+  模块化工具设计
+  支持动态加载
+  统一的工具接口
+end note
+
+note right of LLMLayer
+  多模型支持
+  智能路由
+  缓存优化
+end note
+
+note right of MCPIntegration
+  Model Context Protocol
+  动态工具发现
+  多服务器支持
+end note
+
+@enduml
